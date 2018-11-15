@@ -11,6 +11,7 @@ using namespace std;
 
 mutex readUserInput;
 mutex print;
+mutex map;
 char command;
 
 class Map{
@@ -135,6 +136,7 @@ void readInput(){
 
 void playerControl(){
 
+    map.lock();
     for(int y = 0; y < 20; y++){
         for(int x = 0; x < 20; x++){
 
@@ -194,6 +196,7 @@ void playerControl(){
             }
         }
     }
+    map.unlock();
 }
 
 int main(){
