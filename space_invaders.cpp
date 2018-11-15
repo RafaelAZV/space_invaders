@@ -174,7 +174,7 @@ void playerControl(){
                         command = ' ';
                     }
 
-                    break;
+                break;
 
                 case '^':
 
@@ -185,7 +185,7 @@ void playerControl(){
                         mapManager.Map[y][x] = '^';
                     }
 
-                    break;
+                break;
             }
         }
     }
