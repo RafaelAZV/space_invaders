@@ -134,6 +134,22 @@ void readInput(){
     }
 }
 
+
+void move(int newX, bool left, int x, int y){
+
+    switch(mapManager.Map[y][newX]){
+
+        case ' ':
+            mapManager.Map[y][x] = ' ';
+            if(left) x--; else x++;
+            mapManager.Map[y][newX] = 'A';
+        break;
+    }
+
+    command = ' ';
+
+}
+
 void playerControl(){
 
     map.lock();
@@ -145,35 +161,12 @@ void playerControl(){
                 case 'A':
                     //sync here
                     //Moves Left
-                    if(command == 's' || command == 'S'){
-
-                        int newX = x - 1;
-
-                        switch(mapManager.Map[y][newX]){
-
-                            case ' ':
-                                mapManager.Map[y][x] = ' ';
-                                x--;
-                                mapManager.Map[y][newX] = 'A';
-                            break;
-                        }
-                        command = ' ';
-                    }
+                    if(command == 's' || command == 'S') move(x-1, true, x, y);
+                    
 
                     //Moves Right
-                    if(command == 'd' || command == 'D'){
-
-                        int newX = x + 1;
-
-                        switch(mapManager.Map[y][newX]){
-                            case ' ':
-                                mapManager.Map[y][x] = ' ';
-                                x++;
-                                mapManager.Map[y][newX] = 'A';
-                            break;
-                        }
-                        command = ' ';
-                    }
+                    if(command == 'd' || command == 'D') move(x+1, false, x, y);
+                    
 
                     if(command == 'l' || command == 'L'){
                         y--;
