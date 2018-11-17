@@ -150,66 +150,90 @@ void move(int newX, bool left, int x, int y){
 
 }
 
+
+void enemy_update(){
+    while(){
+
+
+    }
+}
+
+
+
 void playerControl(){
 
-    map.lock();
-    for(int y = 0; y < 20; y++){
-        for(int x = 0; x < 20; x++){
+    while(!endgame){
+        map.lock();
+        for(int y = 0; y < 20; y++){
+            for(int x = 0; x < 20; x++){
 
-            switch(mapManager.Map[y][x]){
+                switch(mapManager.Map[y][x]){
 
-                case 'A':
-                    //sync here
-                    //Moves Left
-                    if(command == 's' || command == 'S') move(x-1, true, x, y);
-                    
+                    case 'A':
+                        //sync here
+                        //Moves Left
+                        if(command == 's' || command == 'S') move(x-1, true, x, y);
+                        
 
-                    //Moves Right
-                    if(command == 'd' || command == 'D') move(x+1, false, x, y);
-                    
+                        //Moves Right
+                        if(command == 'd' || command == 'D') move(x+1, false, x, y);
+                        
 
-                    if(command == 'l' || command == 'L'){
+                        if(command == 'l' || command == 'L'){
+                            y--;
+                            mapManager.Map[y][x] = '^';
+                            command = ' ';
+                        }
+
+                    break;
+
+                    case '^':
+
+                        mapManager.Map[y][x] = ' ';
                         y--;
-                        mapManager.Map[y][x] = '^';
-                        command = ' ';
-                    }
 
-                break;
+                        if(mapManager.Map[y][x] != '#'){
+                            mapManager.Map[y][x] = '^';
+                        }
 
-                case '^':
-
-                    mapManager.Map[y][x] = ' ';
-                    y--;
-
-                    if(mapManager.Map[y][x] != '#'){
-                        mapManager.Map[y][x] = '^';
-                    }
-
-                break;
+                    break;
+                }
             }
         }
+        map.unlock();
     }
-    map.unlock();
 }
 
 int main(){
 
     thread input(readInput);
-    input.detach();
+    //input.detach();
+
+    thread player(playerControl);
+    thread enemy(enemy_control);
+    thread logger();
+    thread refresh();
+
+    while(!endgame){
+        player.join();
+        
+    }
+
+    // vai pra menu
 
     while(!endgame){
 
         //there should be a thread only to run these 2 lines
         system("clear");
         mapManager.printMap();
-
-        thread player(playerControl);
-        player.join();
-
+        
         //probably another to run this
         usleep(gamespeed);
     }
 
+    player.join();
+
+    input.join();
 
     return 0;
 }
