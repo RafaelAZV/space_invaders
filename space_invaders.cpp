@@ -14,6 +14,9 @@ mutex print;
 mutex map;
 char command;
 
+int mapWidth = 20;
+int mapLength = 20;
+
 class Map{
 
     public:
@@ -153,10 +156,12 @@ void move(int newX, bool left, int x, int y){
 
 // Thread da atualizacao dos inimigos(em construcao)
 void enemy_update(){
-    int i = 0;
-    while(true){
-        i++;
+    create_enemies();
+
+    while(!endgame){
+        enemies_move();
     }
+
 }
 
 void create_enemies(){
@@ -188,9 +193,53 @@ void create_enemies(){
 
 }
 
+void enemies_move(string direction, int leftmost, int rightmost){
+
+    char current_enemy, next_enemy;
+
+    map.lock();
+    for(int y=0; y<mapLength; y++){
+        for(int x=0; x<mapWidth; x++){
+            if(mapManager.Map[y][x] != '#' && mapManager.Map[y][x] != 'A' && 
+               mapManager.Map[y][x] != "^"){
+
+                // Salva caractere 
+                current_enemy = mapManager.Map[y][x];
+                mapManager.Map[y][x] = last_enemy;
+                if(direction == "right"){
+                    if( rightmost != (mapWidth-2) ){ // movimenta para baixo
+
+                        direction = "left";
+
+                    }else{ // movimenta para a direita
+
+                    }
+                    next_enemy = mapManager.Map[y][x];
+
+                }else{
+                    if( leftmost != 2 ){ // movimenta para baixo
+
+                        direction = "right";
+
+                    }else{ // movimenta para a esquerda
+
+                    }
+                    
+                }
+               
+            }
+        }
+    }
+    map.unlock();
+
+}
+
+// Para saber qual os inimigos mais a esquerda ou a direita tem que contar fazer um vetor com a contagem de
+// quais inimigos daquela fileira morreu.
+
 
 // Thread de refresh da tela de jogo.
-void _refresh(){
+void _refresh(){ // tem que colocar o timer de 50ms pra atualizacao obrigatoria.
     while(!endgame){
         system("clear");
         mapManager.printMap();
@@ -249,7 +298,7 @@ int main(){
     thread input(readInput);
     thread player(playerControl);
     thread refresh(_refresh);
-    thread enemy(create_enemies);
+    thread enemy(enemy_update);
     //thread logger();
 
     while(!endgame){
@@ -261,6 +310,7 @@ int main(){
     player.join();
     refresh.join();
     input.join();
+    enemy.join();
 
     return 0;
 }
