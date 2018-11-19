@@ -151,13 +151,23 @@ void move(int newX, bool left, int x, int y){
 }
 
 
+// Thread da atualizacao dos inimigos(em construcao)
 void enemy_update(){
-    while(){
-
-
+    int i = 0;
+    while(true){
+        i++;
     }
 }
 
+
+// Thread de refresh da tela de jogo.
+void _refresh(){
+    while(!endgame){
+        system("clear");
+        mapManager.printMap();
+        usleep(gamespeed);
+    }
+}
 
 
 void playerControl(){
@@ -206,33 +216,21 @@ void playerControl(){
 
 int main(){
 
+    // Dispara threads para iniciar o programa.
     thread input(readInput);
-    //input.detach();
-
     thread player(playerControl);
-    thread enemy(enemy_control);
-    thread logger();
-    thread refresh();
+    thread refresh(_refresh);
+    //thread enemy(enemy_control);
+    //thread logger();
 
     while(!endgame){
-        player.join();
-        
+        // While loop que segura o jogo ate que o mesmo
+        // seja abortado.
     }
 
-    // vai pra menu
-
-    while(!endgame){
-
-        //there should be a thread only to run these 2 lines
-        system("clear");
-        mapManager.printMap();
-        
-        //probably another to run this
-        usleep(gamespeed);
-    }
-
+    // Join das thread ativas.
     player.join();
-
+    refresh.join();
     input.join();
 
     return 0;
