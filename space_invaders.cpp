@@ -159,6 +159,35 @@ void enemy_update(){
     }
 }
 
+void create_enemies(){
+
+    // 11 inimigos por linha
+    // 5 linhas
+    int n_enemies_by_line = 10;
+    int n_lines = 5;
+
+    map.lock();
+    for(int y=1; y<(n_lines+1); y++){
+        for(int x=1; x<(n_enemies_by_line+1); x++){
+                switch(y){
+                    case 1:
+                        mapManager.Map[y][x] = 'Y';
+                        break;
+                    case 2:
+                        mapManager.Map[y][x] = 'U';
+                        break;
+                    case 3:
+                        mapManager.Map[y][x] = 'V';
+                        break;
+                    default:
+                        mapManager.Map[y][x] = 'W';
+                }
+            }
+    }
+    map.unlock();
+
+}
+
 
 // Thread de refresh da tela de jogo.
 void _refresh(){
@@ -220,7 +249,7 @@ int main(){
     thread input(readInput);
     thread player(playerControl);
     thread refresh(_refresh);
-    //thread enemy(enemy_control);
+    thread enemy(create_enemies);
     //thread logger();
 
     while(!endgame){
