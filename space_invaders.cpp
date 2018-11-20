@@ -196,44 +196,81 @@ void create_enemies(){
 void enemies_move(string direction, int leftmost, int rightmost){
 
     char current_enemy, next_enemy;
+    bool first;
 
     map.lock();
-    for(int y=0; y<mapLength; y++){
-        for(int x=0; x<mapWidth; x++){
-            if(mapManager.Map[y][x] != '#' && mapManager.Map[y][x] != 'A' && 
-               mapManager.Map[y][x] != "^"){
-
+    // Movimenta para baixo
+    if(rightmost == (mapWidth-2) || leftmost == 2){
+        for(int x=1; x<mapWidth; x++){
+            first = true;
+            for(int y=1; y<mapLength; y++){
                 // Salva caractere 
                 current_enemy = mapManager.Map[y][x];
-                mapManager.Map[y][x] = last_enemy;
-                if(direction == "right"){
-                    if( rightmost != (mapWidth-2) ){ // movimenta para baixo
-
-                        direction = "left";
-
-                    }else{ // movimenta para a direita
-
-                    }
-                    next_enemy = mapManager.Map[y][x];
-
+                // primeiro da linha
+                if(first){ 
+                    mapManager.Map[y][x] = ' ';
+                    last_enemy = current_enemy;
+                    first = false;
+                //outros
                 }else{
-                    if( leftmost != 2 ){ // movimenta para baixo
-
-                        direction = "right";
-
-                    }else{ // movimenta para a esquerda
-
-                    }
-                    
+                    mapManager.Map[y][x] = last_enemy;
+                    last_enemy = current_enemy;
                 }
-               
+            }
+        }    
+        // troca de sentido
+        if(direction == "right"){
+            direction = "left";
+        }else{
+            direction = "right";
+        }
+    }else{
+        // movimenta para a direita
+        if(direction == "right"){ 
+            for(int y=1; y<mapLength; y++){
+                first = true;
+                for(int x=1; x<mapWidth; x++){
+                    if(mapManager.Map[y][x] != 'A' && mapManager.Map[y][x] != "^"){
+                        // Salva caractere 
+                        current_enemy = mapManager.Map[y][x];
+                        // primeiro da linha
+                        if(first){ 
+                            mapManager.Map[y][x] = ' ';
+                            last_enemy = current_enemy;
+                            first = false;
+                        //outros
+                        }else{ 
+                            mapManager.Map[y][x] = last_enemy;
+                            last_enemy = current_enemy;
+                        }
+                    }
+                }
+            }
+        }else{
+            // movimenta para a esquerda
+            for(int y=(mapLength-1); y>0; y--){
+                first = true;
+                for(int x=(mapWidth-1); x>0; x--){
+                    if(mapManager.Map[y][x] != 'A' && mapManager.Map[y][x] != "^"){
+                        // Salva caractere 
+                        current_enemy = mapManager.Map[y][x];
+                        // primeiro da linha
+                        if(first){ 
+                            mapManager.Map[y][x] = ' ';
+                            last_enemy = current_enemy;
+                            first = false;
+                        //outros
+                        }else{ 
+                            mapManager.Map[y][x] = last_enemy;
+                            last_enemy = current_enemy;
+                        }
+                    }
+                }
             }
         }
     }
     map.unlock();
-
 }
-
 // Para saber qual os inimigos mais a esquerda ou a direita tem que contar fazer um vetor com a contagem de
 // quais inimigos daquela fileira morreu.
 
