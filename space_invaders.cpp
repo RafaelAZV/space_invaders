@@ -159,7 +159,7 @@ void enemy_update(){
     create_enemies();
 
     while(!endgame){
-        enemies_move();
+        enemies_move(direction, leftmost, rightmost);
     }
 
 }
@@ -193,7 +193,7 @@ void create_enemies(){
 
 }
 
-void enemies_move(string direction, int leftmost, int rightmost){
+void enemies_move(string &direction, int leftmost, int rightmost){
 
     char current_enemy, next_enemy;
     bool first;
@@ -271,6 +271,11 @@ void enemies_move(string direction, int leftmost, int rightmost){
     }
     map.unlock();
 }
+
+void enemies_shot(){
+    // insert random shot that fires from the first row.
+}
+
 // Para saber qual os inimigos mais a esquerda ou a direita tem que contar fazer um vetor com a contagem de
 // quais inimigos daquela fileira morreu.
 
