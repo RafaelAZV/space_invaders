@@ -87,28 +87,28 @@ void WorkTermios::initTermios(int echo){
 
 /* Restore old terminal i/o settings */
 void WorkTermios::resetTermios(void){
-  tcsetattr(0, TCSANOW, &old);
+    tcsetattr(0, TCSANOW, &old);
 }
 
 /* Read 1 character - echo defines echo mode */
 char WorkTermios::getch_(int echo){
 
-  char ch;
+    char ch;
 
-  initTermios(echo);
-  ch = getchar();
-  resetTermios();
-  return ch;
+    initTermios(echo);
+    ch = getchar();
+    resetTermios();
+    return ch;
 }
 
 /* Read 1 character without echo */
 char WorkTermios::getch(void){
-  return getch_(0);
+    return getch_(0);
 }
 
 /* Read 1 character with echo */
 char WorkTermios::getche(void){
-  return getch_(1);
+    return getch_(1);
 }
 
 bool endgame = false;
