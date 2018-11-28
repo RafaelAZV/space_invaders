@@ -1,6 +1,7 @@
 #include <iostream>
 #include <thread>
 #include <mutex>
+#include <algorithm>
 #include <vector>
 #include <string>
 #include <termios.h>
@@ -16,12 +17,15 @@ using namespace std;
 mutex readUserInput;
 mutex print;
 mutex map;
+mutex mborda;
 char command;
 
 int mapWidth = 20;
 int mapLength = 20;
 
 vvi borda;
+vi borda_existente;
+vi column_kills;
 
 class Map{
 
@@ -183,10 +187,14 @@ void create_enemies(int n_lines, int n_enemies_by_line){
 
     vi point(2);
     borda.resize(n_enemies_by_line);
+    borda_existente.resize(n_enemies_by_line);
+    column_kills.resize(n_enemies_by_line);
     for(int i=0; i<borda.size(); i++){
         point[0] = i+1;
         point[1] = n_lines;
         borda[i] = point;
+        borda_existente[i] = i;
+        column_kills[i] = n_lines;
     }
 
 }
@@ -291,6 +299,7 @@ void enemies_move(string &direction, int &leftmost, int &rightmost, bool &flag_d
 void enemy_update(){
      // 11 inimigos por linha
     // 5 linhas
+
     int n_enemies_by_line = 10;
     int n_lines = 5;
     string direction = "right";
@@ -309,11 +318,17 @@ void enemy_update(){
 }
 
 void enemies_shot(){
-    int i = 0;
-    // insert random shot that fires from the first row.
+    // insert random shot that fires randomly from the first row.
+    random_shuffle(borda_existente.begin(), borda_existente.end());
+    vi shooter = borda[borda_existente[0]];
+    int x = shooter[1];
+    int y = shooter[0];
+
+    mapManager.Map[y+1][x] = '!';
 }
 
-// Para saber qual os inimigos mais a esquerda ou a direita tem que contar fazer um vetor com a contagem de
+// Para saber qual os inimigos mais a esquerda ou a direita tem que contar fazer um vetor 
+//com a contagem de
 // quais inimigos daquela fileira morreu.
 
 
@@ -325,6 +340,28 @@ void _refresh(){ // tem que colocar o timer de 50ms pra atualizacao obrigatoria.
         mapManager.printMap();
         usleep(gamespeed);
     }
+}
+
+void enemy_killed(int x, int y){
+    int xborda, yborda;
+    mborda.lock();
+    for(int i=0; i<borda_existente.size(); i++){
+        xborda = borda[borda_existente[i]][1];
+        yborda = borda[borda_existente[i]][0];
+
+        if( (x == xborda) && (y == yborda) ){
+            column_kills[borda_existente[i]]--;
+            if(column_kills[borda_existente[i]] == 0){
+                borda[borda_existente[i]][0] = -1;
+                borda[borda_existente[i]][1] = -1;
+                borda_existente.erase(borda_existente.begin() + i);
+            }else{
+                borda[borda_existente[i]][0]--;
+            }
+            break;
+        }
+    }
+    mborda.unlock();
 }
 
 
@@ -363,16 +400,15 @@ void playerControl(){
 
                             if(mapManager.Map[y-1][x] == 'W' || mapManager.Map[y-1][x] == 'Y' ||
                                mapManager.Map[y-1][x] == 'U' || mapManager.Map[y-1][x] == 'V'){
+                                // Atualizar bordas
+                                enemy_killed(x, y-1);
                                 mapManager.Map[y-1][x] = ' ';
-                            }
-                            else if(mapManager.Map[y-1][x] == ' '){
+                            }else if(mapManager.Map[y-1][x] == ' '){
                                 mapManager.Map[y-1][x] = '^';
-                            }
-                            else{
+                            }else{
                                 y=y; // Nada acontece
                             }
-                        }
-                        else{
+                        }else{
                             update_once = true;
                         }
 
