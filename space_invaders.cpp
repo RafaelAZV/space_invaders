@@ -62,6 +62,10 @@ void Map::printMap(){
     for(int y = 0; y < 20; y++){
         std::cout << this->Map[y] << std::endl;
     }
+
+    for(int i=0; i<borda.size(); i++){
+        cout << borda[i][0] << " " << borda[i][1] << endl;
+    }
 }
 
 Map mapManager;
@@ -190,8 +194,8 @@ void create_enemies(int n_lines, int n_enemies_by_line){
     borda_existente.resize(n_enemies_by_line);
     column_kills.resize(n_enemies_by_line);
     for(int i=0; i<borda.size(); i++){
-        point[0] = i+1;
-        point[1] = n_lines;
+        point[0] = n_lines;
+        point[1] = i+1;
         borda[i] = point;
         borda_existente[i] = i;
         column_kills[i] = n_lines;
@@ -204,11 +208,11 @@ void move_borda(string sentido){
     mborda.lock();
     for(int i=0; i<borda_existente.size(); i++){
         if(sentido == "right"){
-            borda[borda_existente[i]][0]++;
-        }else if( sentido == "left"){
-            borda[borda_existente[i]][0]--;
-        }else{ // down
             borda[borda_existente[i]][1]++;
+        }else if( sentido == "left"){
+            borda[borda_existente[i]][1]--;
+        }else{ // down
+            borda[borda_existente[i]][0]++;
         }
     }
     mborda.unlock();
