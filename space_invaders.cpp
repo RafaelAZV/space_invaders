@@ -63,9 +63,10 @@ void Map::printMap(){
         std::cout << this->Map[y] << std::endl;
     }
 
+    /*
     for(int i=0; i<borda.size(); i++){
         cout << borda[i][0] << " " << borda[i][1] << endl;
-    }
+    }*/
 }
 
 Map mapManager;
@@ -144,7 +145,7 @@ void readInput(){
 
     WorkTermios inputManager;
 
-    while(1){
+    while(!endgame){
         readUserInput.lock();
         command = inputManager.getch();
         readUserInput.unlock();
@@ -219,11 +220,26 @@ void move_borda(string sentido){
 
 }
 
+void update_leftmost_rightmost(int &leftmost, int &rightmost){
+    mborda.lock();
+
+    sort(borda_existente.begin(), borda_existente.end());
+
+    int len = borda_existente.size()-1;
+
+    leftmost = borda[borda_existente[0]][1];
+    rightmost = borda[borda_existente[len]][1];
+
+    mborda.unlock();
+}
+
 void enemies_move(string &direction, int &leftmost, int &rightmost, bool &flag_down){
 
     char current_enemy, next_enemy;
     bool first;
     char last_enemy;
+
+    update_leftmost_rightmost(leftmost, rightmost);
 
     map.lock();
     // Movimenta para baixo
@@ -391,6 +407,7 @@ void _refresh(){ // tem que colocar o timer de 50ms pra atualizacao obrigatoria.
         mapManager.printMap();
         usleep(gamespeed);
     }
+
 }
 
 void playerControl(){
@@ -450,6 +467,8 @@ void playerControl(){
                             mapManager.Map[y][x] = ' ';
                             if(mapManager.Map[y+1][x] == 'A'){
                                 // fim do jogo
+                                mapManager.Map[y+1][x] == ' ';
+                                endgame = true;
                                 int q = 0;
                             }else if(mapManager.Map[y+1][x] == ' '){
                                 mapManager.Map[y+1][x] = '!';
@@ -482,10 +501,11 @@ int main(){
     }
 
     // Join das thread ativas.
-    player.detach();
-    refresh.detach();
-    enemy.detach();
-    input.detach();
+    player.join();
+    refresh.join();
+    enemy.join();
+    cout << "FIM DO JOGO! Aperte qualquer tecla para sair." << endl;
+    input.join();
 
     return 0;
 }
