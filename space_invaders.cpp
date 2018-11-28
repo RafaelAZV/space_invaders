@@ -1,11 +1,15 @@
 #include <iostream>
 #include <thread>
 #include <mutex>
+#include <vector>
 #include <string>
 #include <termios.h>
 #include <stdio.h>
 #include <time.h>
 #include <unistd.h>
+
+typedef std::vector<std::vector<int> > vvi;
+typedef std::vector<int> vi;
 
 using namespace std;
 
@@ -16,6 +20,8 @@ char command;
 
 int mapWidth = 20;
 int mapLength = 20;
+
+vvi borda;
 
 class Map{
 
@@ -115,9 +121,9 @@ char WorkTermios::getche(void){
 }
 
 bool endgame = false;
-int gamespeed = 1000000;
-
-
+int gamespeed = 30000;
+int enemyspeed = 1000000;
+int playerspeed = 10000;
 
 
 /*
@@ -175,6 +181,14 @@ void create_enemies(int n_lines, int n_enemies_by_line){
     }
     map.unlock();
 
+    vi point(2);
+    borda.resize(n_enemies_by_line);
+    for(int i=0; i<borda.size(); i++){
+        point[0] = i+1;
+        point[1] = n_lines;
+        borda[i] = point;
+    }
+
 }
 
 void enemies_move(string &direction, int &leftmost, int &rightmost, bool &flag_down){
@@ -182,8 +196,6 @@ void enemies_move(string &direction, int &leftmost, int &rightmost, bool &flag_d
     char current_enemy, next_enemy;
     bool first;
     char last_enemy;
-
-    cout << flag_down << endl;
 
     map.lock();
     // Movimenta para baixo
@@ -282,14 +294,17 @@ void enemy_update(){
     int n_enemies_by_line = 10;
     int n_lines = 5;
     string direction = "right";
-    int leftmost = 3;
+    int leftmost = 1;
     int rightmost = n_enemies_by_line;
+
+    bool flag_down = false;
 
     create_enemies(n_lines, n_enemies_by_line);
 
-    /*while(!endgame){
-        enemies_move(direction, leftmost, rightmost);
-    }*/
+    while(!endgame){
+        enemies_move(direction, leftmost, rightmost, flag_down);
+        usleep(enemyspeed);
+    }
 
 }
 
@@ -305,33 +320,22 @@ void enemies_shot(){
 // Thread de refresh da tela de jogo.
 void _refresh(){ // tem que colocar o timer de 50ms pra atualizacao obrigatoria.
 
-    int n_enemies_by_line = 10;
-    int n_lines = 5;
-    string direction = "right";
-    int leftmost = 1;
-    int rightmost = n_enemies_by_line;
-
-    int i = 0;
-    bool flag_down = false;
-    //while(!endgame){
-    while(i < 30){
+    while(!endgame){
         system("clear");
-        cout << "MOVE" << endl;
-        enemies_move(direction, leftmost, rightmost, flag_down);
         mapManager.printMap();
         usleep(gamespeed);
-        i++;
     }
-    cout << "saiu do loop" << endl;
 }
 
 
 void playerControl(){
 
+    bool update_once;
     while(!endgame){
         map.lock();
-        for(int y = 0; y < 20; y++){
-            for(int x = 0; x < 20; x++){
+        update_once = true;
+        for(int y = 19; y > 0; y--){
+            for(int x = 19; x > 0; x--){
 
                 switch(mapManager.Map[y][x]){
 
@@ -346,20 +350,30 @@ void playerControl(){
                         
 
                         if(command == 'l' || command == 'L'){
-                            y--;
-                            mapManager.Map[y][x] = '^';
+                            mapManager.Map[y-1][x] = '^';
                             command = ' ';
                         }
 
                     break;
 
                     case '^':
+                        if(update_once){
+                            update_once = false;
+                            mapManager.Map[y][x] = ' ';
 
-                        mapManager.Map[y][x] = ' ';
-                        y--;
-
-                        if(mapManager.Map[y][x] != '#'){
-                            mapManager.Map[y][x] = '^';
+                            if(mapManager.Map[y-1][x] == 'W' || mapManager.Map[y-1][x] == 'Y' ||
+                               mapManager.Map[y-1][x] == 'U' || mapManager.Map[y-1][x] == 'V'){
+                                mapManager.Map[y-1][x] = ' ';
+                            }
+                            else if(mapManager.Map[y-1][x] == ' '){
+                                mapManager.Map[y-1][x] = '^';
+                            }
+                            else{
+                                y=y; // Nada acontece
+                            }
+                        }
+                        else{
+                            update_once = true;
                         }
 
                     break;
@@ -367,6 +381,7 @@ void playerControl(){
             }
         }
         map.unlock();
+        usleep(playerspeed);
     }
 }
 
@@ -374,9 +389,9 @@ int main(){
 
     // Dispara threads para iniciar o programa.
     thread input(readInput);
+    thread refresh(_refresh);
     thread player(playerControl);
     thread enemy(enemy_update);
-    thread refresh(_refresh);
     //thread logger();
 
     while(!endgame){
@@ -385,10 +400,10 @@ int main(){
     }
 
     // Join das thread ativas.
-    player.join();
-    refresh.join();
-    input.join();
-    enemy.join();
+    player.detach();
+    refresh.detach();
+    enemy.detach();
+    input.detach();
 
     return 0;
 }
