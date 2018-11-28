@@ -199,6 +199,22 @@ void create_enemies(int n_lines, int n_enemies_by_line){
 
 }
 
+void move_borda(string sentido){
+
+    mborda.lock();
+    for(int i=0; i<borda_existente.size(); i++){
+        if(sentido == "right"){
+            borda[borda_existente[i]][0]++;
+        }else if( sentido == "left"){
+            borda[borda_existente[i]][0]--;
+        }else{ // down
+            borda[borda_existente[i]][1]++;
+        }
+    }
+    mborda.unlock();
+
+}
+
 void enemies_move(string &direction, int &leftmost, int &rightmost, bool &flag_down){
 
     char current_enemy, next_enemy;
@@ -234,6 +250,7 @@ void enemies_move(string &direction, int &leftmost, int &rightmost, bool &flag_d
         }else{
             direction = "right";
         }
+        move_borda("down");
     }else{
         // movimenta para a direita
         if(direction == "right"){ 
@@ -262,6 +279,7 @@ void enemies_move(string &direction, int &leftmost, int &rightmost, bool &flag_d
             if(rightmost == mapWidth-3){
                 flag_down = true;
             }
+            move_borda(direction);
 
         }else{
             //flag_down = true;
@@ -290,9 +308,47 @@ void enemies_move(string &direction, int &leftmost, int &rightmost, bool &flag_d
             if(leftmost == 1){
                 flag_down = true;
             }
+            move_borda(direction);
         }
     }
     map.unlock();
+}
+
+void enemies_shot(){
+    // insert random shot that fires randomly from the first row.
+    mborda.lock();
+    map.lock();
+    for(int i=0; i<2; i++){
+        random_shuffle(borda_existente.begin(), borda_existente.end());
+        vi shooter = borda[borda_existente[0]];
+        int x = shooter[1];
+        int y = shooter[0];
+        mapManager.Map[y+1][x] = '!';
+    }
+    mborda.unlock();
+    map.unlock();
+}
+
+void enemy_killed(int x, int y){
+    int xborda, yborda;
+    mborda.lock();
+    for(int i=0; i<borda_existente.size(); i++){
+        xborda = borda[borda_existente[i]][1];
+        yborda = borda[borda_existente[i]][0];
+
+        if( (x == xborda) && (y == yborda) ){
+            column_kills[borda_existente[i]]--;
+            if(column_kills[borda_existente[i]] <= 0){
+                borda[borda_existente[i]][0] = -1;
+                borda[borda_existente[i]][1] = -1;
+                borda_existente.erase(borda_existente.begin() + i);
+            }else{
+                borda[borda_existente[i]][0]--;
+            }
+            break;
+        }
+    }
+    mborda.unlock();
 }
 
 // Thread da atualizacao dos inimigos(em construcao)
@@ -312,19 +368,10 @@ void enemy_update(){
 
     while(!endgame){
         enemies_move(direction, leftmost, rightmost, flag_down);
+        enemies_shot();
         usleep(enemyspeed);
     }
 
-}
-
-void enemies_shot(){
-    // insert random shot that fires randomly from the first row.
-    random_shuffle(borda_existente.begin(), borda_existente.end());
-    vi shooter = borda[borda_existente[0]];
-    int x = shooter[1];
-    int y = shooter[0];
-
-    mapManager.Map[y+1][x] = '!';
 }
 
 // Para saber qual os inimigos mais a esquerda ou a direita tem que contar fazer um vetor 
@@ -342,35 +389,14 @@ void _refresh(){ // tem que colocar o timer de 50ms pra atualizacao obrigatoria.
     }
 }
 
-void enemy_killed(int x, int y){
-    int xborda, yborda;
-    mborda.lock();
-    for(int i=0; i<borda_existente.size(); i++){
-        xborda = borda[borda_existente[i]][1];
-        yborda = borda[borda_existente[i]][0];
-
-        if( (x == xborda) && (y == yborda) ){
-            column_kills[borda_existente[i]]--;
-            if(column_kills[borda_existente[i]] == 0){
-                borda[borda_existente[i]][0] = -1;
-                borda[borda_existente[i]][1] = -1;
-                borda_existente.erase(borda_existente.begin() + i);
-            }else{
-                borda[borda_existente[i]][0]--;
-            }
-            break;
-        }
-    }
-    mborda.unlock();
-}
-
-
 void playerControl(){
 
     bool update_once;
+    bool update_shot;
     while(!endgame){
         map.lock();
         update_once = true;
+        update_shot = true;
         for(int y = 19; y > 0; y--){
             for(int x = 19; x > 0; x--){
 
@@ -413,6 +439,22 @@ void playerControl(){
                         }
 
                     break;
+
+                    case '!':
+                        if(update_shot){
+                            update_shot = false;
+                            mapManager.Map[y][x] = ' ';
+                            if(mapManager.Map[y+1][x] == 'A'){
+                                // fim do jogo
+                                int q = 0;
+                            }else if(mapManager.Map[y+1][x] == ' '){
+                                mapManager.Map[y+1][x] = '!';
+                            }else{
+                                y = y;
+                            }
+                        }else{
+                            update_shot = true;
+                        }
                 }
             }
         }
