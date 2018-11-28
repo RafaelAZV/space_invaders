@@ -115,7 +115,7 @@ char WorkTermios::getche(void){
 }
 
 bool endgame = false;
-int gamespeed = 3000;
+int gamespeed = 1000000;
 
 
 
@@ -153,23 +153,7 @@ void move(int newX, bool left, int x, int y){
 
 }
 
-
-// Thread da atualizacao dos inimigos(em construcao)
-void enemy_update(){
-    create_enemies();
-
-    while(!endgame){
-        enemies_move(direction, leftmost, rightmost);
-    }
-
-}
-
-void create_enemies(){
-
-    // 11 inimigos por linha
-    // 5 linhas
-    int n_enemies_by_line = 10;
-    int n_lines = 5;
+void create_enemies(int n_lines, int n_enemies_by_line){
 
     map.lock();
     for(int y=1; y<(n_lines+1); y++){
@@ -193,32 +177,38 @@ void create_enemies(){
 
 }
 
-void enemies_move(string &direction, int leftmost, int rightmost){
+void enemies_move(string &direction, int &leftmost, int &rightmost, bool &flag_down){
 
     char current_enemy, next_enemy;
     bool first;
+    char last_enemy;
+
+    cout << flag_down << endl;
 
     map.lock();
     // Movimenta para baixo
-    if(rightmost == (mapWidth-2) || leftmost == 2){
-        for(int x=1; x<mapWidth; x++){
+    if( ((rightmost >= (mapWidth-3)) || (leftmost <= 2) ) && flag_down == true){
+        for(int x=1; x<mapWidth-2; x++){
             first = true;
-            for(int y=1; y<mapLength; y++){
-                // Salva caractere 
-                current_enemy = mapManager.Map[y][x];
-                // primeiro da linha
-                if(first){ 
-                    mapManager.Map[y][x] = ' ';
-                    last_enemy = current_enemy;
-                    first = false;
-                //outros
-                }else{
-                    mapManager.Map[y][x] = last_enemy;
-                    last_enemy = current_enemy;
+            for(int y=1; y<mapLength-2; y++){
+                if(mapManager.Map[y][x] != 'A' && mapManager.Map[y][x] != '^'){
+                    // Salva caractere 
+                    current_enemy = mapManager.Map[y][x];
+                    // primeiro da linha
+                    if(first){ 
+                        mapManager.Map[y][x] = ' ';
+                        last_enemy = current_enemy;
+                        first = false;
+                    //outros
+                    }else{
+                        mapManager.Map[y][x] = last_enemy;
+                        last_enemy = current_enemy;
+                    }
                 }
             }
         }    
         // troca de sentido
+        flag_down = false;
         if(direction == "right"){
             direction = "left";
         }else{
@@ -227,10 +217,11 @@ void enemies_move(string &direction, int leftmost, int rightmost){
     }else{
         // movimenta para a direita
         if(direction == "right"){ 
-            for(int y=1; y<mapLength; y++){
+            //flag_down = true;
+            for(int y=1; y<mapWidth-2; y++){
                 first = true;
-                for(int x=1; x<mapWidth; x++){
-                    if(mapManager.Map[y][x] != 'A' && mapManager.Map[y][x] != "^"){
+                for(int x=1; x<mapLength-2; x++){
+                    if(mapManager.Map[y][x] != 'A' && mapManager.Map[y][x] != '^'){
                         // Salva caractere 
                         current_enemy = mapManager.Map[y][x];
                         // primeiro da linha
@@ -246,12 +237,19 @@ void enemies_move(string &direction, int leftmost, int rightmost){
                     }
                 }
             }
+            rightmost++;
+            leftmost++;
+            if(rightmost == mapWidth-3){
+                flag_down = true;
+            }
+
         }else{
+            //flag_down = true;
             // movimenta para a esquerda
-            for(int y=(mapLength-1); y>0; y--){
+            for(int y=(mapLength-3); y>0; y--){
                 first = true;
-                for(int x=(mapWidth-1); x>0; x--){
-                    if(mapManager.Map[y][x] != 'A' && mapManager.Map[y][x] != "^"){
+                for(int x=(mapWidth-3); x>0; x--){
+                    if(mapManager.Map[y][x] != 'A' && mapManager.Map[y][x] != '^'){
                         // Salva caractere 
                         current_enemy = mapManager.Map[y][x];
                         // primeiro da linha
@@ -266,13 +264,37 @@ void enemies_move(string &direction, int leftmost, int rightmost){
                         }
                     }
                 }
+            }
+            rightmost--;
+            leftmost--;
+            if(leftmost == 1){
+                flag_down = true;
             }
         }
     }
     map.unlock();
 }
 
+// Thread da atualizacao dos inimigos(em construcao)
+void enemy_update(){
+     // 11 inimigos por linha
+    // 5 linhas
+    int n_enemies_by_line = 10;
+    int n_lines = 5;
+    string direction = "right";
+    int leftmost = 3;
+    int rightmost = n_enemies_by_line;
+
+    create_enemies(n_lines, n_enemies_by_line);
+
+    /*while(!endgame){
+        enemies_move(direction, leftmost, rightmost);
+    }*/
+
+}
+
 void enemies_shot(){
+    int i = 0;
     // insert random shot that fires from the first row.
 }
 
@@ -282,11 +304,25 @@ void enemies_shot(){
 
 // Thread de refresh da tela de jogo.
 void _refresh(){ // tem que colocar o timer de 50ms pra atualizacao obrigatoria.
-    while(!endgame){
+
+    int n_enemies_by_line = 10;
+    int n_lines = 5;
+    string direction = "right";
+    int leftmost = 1;
+    int rightmost = n_enemies_by_line;
+
+    int i = 0;
+    bool flag_down = false;
+    //while(!endgame){
+    while(i < 30){
         system("clear");
+        cout << "MOVE" << endl;
+        enemies_move(direction, leftmost, rightmost, flag_down);
         mapManager.printMap();
         usleep(gamespeed);
+        i++;
     }
+    cout << "saiu do loop" << endl;
 }
 
 
@@ -339,8 +375,8 @@ int main(){
     // Dispara threads para iniciar o programa.
     thread input(readInput);
     thread player(playerControl);
-    thread refresh(_refresh);
     thread enemy(enemy_update);
+    thread refresh(_refresh);
     //thread logger();
 
     while(!endgame){
