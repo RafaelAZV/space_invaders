@@ -63,10 +63,16 @@ void Map::printMap(){
         std::cout << this->Map[y] << std::endl;
     }
 
-    /*
-    for(int i=0; i<borda.size(); i++){
+    
+    /*for(int i=0; i<borda.size(); i++){
         cout << borda[i][0] << " " << borda[i][1] << endl;
-    }*/
+    }
+    cout << borda_existente.size() << endl;
+    for(int i=0; i<borda_existente.size(); i++){
+        cout << borda_existente[i] << " ";
+    }
+    cout << endl;*/
+
 }
 
 Map mapManager;
@@ -130,6 +136,7 @@ char WorkTermios::getche(void){
 }
 
 bool endgame = false;
+bool won = false;
 int gamespeed = 30000;
 int enemyspeed = 1000000;
 int playerspeed = 10000;
@@ -163,7 +170,6 @@ void move(int newX, bool left, int x, int y){
             mapManager.Map[y][newX] = 'A';
         break;
     }
-
     command = ' ';
 
 }
@@ -191,6 +197,7 @@ void create_enemies(int n_lines, int n_enemies_by_line){
     map.unlock();
 
     vi point(2);
+    mborda.lock();
     borda.resize(n_enemies_by_line);
     borda_existente.resize(n_enemies_by_line);
     column_kills.resize(n_enemies_by_line);
@@ -201,6 +208,7 @@ void create_enemies(int n_lines, int n_enemies_by_line){
         borda_existente[i] = i;
         column_kills[i] = n_lines;
     }
+    mborda.unlock();
 
 }
 
@@ -368,6 +376,12 @@ void enemy_killed(int x, int y){
             break;
         }
     }
+
+    if(borda_existente.size() == 0){
+        endgame = true;
+        won = true;
+    }
+
     mborda.unlock();
 }
 
@@ -388,7 +402,7 @@ void enemy_update(){
 
     while(!endgame){
         enemies_move(direction, leftmost, rightmost, flag_down);
-        enemies_shot();
+        //enemies_shot();
         usleep(enemyspeed);
     }
 
@@ -414,12 +428,22 @@ void playerControl(){
 
     bool update_once;
     bool update_shot;
+    int count; // Previne bugs.
     while(!endgame){
         map.lock();
         update_once = true;
         update_shot = true;
+        count = 0;
         for(int y = 19; y > 0; y--){
             for(int x = 19; x > 0; x--){
+
+                if(mapManager.Map[y-1][x] == 'W' || mapManager.Map[y-1][x] == 'Y' ||
+                    mapManager.Map[y-1][x] == 'U' || mapManager.Map[y-1][x] == 'V'){
+                        if(mapManager.Map[y+1][x] == 'A'){
+                            endgame = true;
+                        }
+                        count++;
+                }
 
                 switch(mapManager.Map[y][x]){
 
@@ -478,11 +502,16 @@ void playerControl(){
                         }else{
                             update_shot = true;
                         }
+                        
                 }
             }
         }
         map.unlock();
         usleep(playerspeed);
+        if(count == 0){
+            won = true;
+            endgame = true;
+        }
     }
 }
 
@@ -504,7 +533,11 @@ int main(){
     player.join();
     refresh.join();
     enemy.join();
-    cout << "FIM DO JOGO! Aperte qualquer tecla para sair." << endl;
+    if(won){
+        cout << "PARABENS!! VOCE PROTEGEU A TERRA DA AMEACA ALIENIGENA!! " << endl;
+    }
+    usleep(2000);
+    cout << "\n\nFIM DO JOGO!" << endl;
     input.join();
 
     return 0;
