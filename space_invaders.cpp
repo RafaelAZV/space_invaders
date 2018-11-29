@@ -402,7 +402,7 @@ void enemy_update(){
 
     while(!endgame){
         enemies_move(direction, leftmost, rightmost, flag_down);
-        //enemies_shot();
+        enemies_shot();
         usleep(enemyspeed);
     }
 
