@@ -436,15 +436,7 @@ void playerControl(){
         count = 0;
         for(int y = 19; y > 0; y--){
             for(int x = 19; x > 0; x--){
-
-                if(mapManager.Map[y-1][x] == 'W' || mapManager.Map[y-1][x] == 'Y' ||
-                    mapManager.Map[y-1][x] == 'U' || mapManager.Map[y-1][x] == 'V'){
-                        if(mapManager.Map[y+1][x] == 'A'){
-                            endgame = true;
-                        }
-                        count++;
-                }
-
+            
                 switch(mapManager.Map[y][x]){
 
                     case 'A':
@@ -508,10 +500,6 @@ void playerControl(){
         }
         map.unlock();
         usleep(playerspeed);
-        if(count == 0){
-            won = true;
-            endgame = true;
-        }
     }
 }
 
