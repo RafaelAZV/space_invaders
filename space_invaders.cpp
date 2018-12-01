@@ -8,12 +8,28 @@
 #include <stdio.h>
 #include <time.h>
 #include <unistd.h>
+#include <sstream>          // parsing
+#include <sys/socket.h> // for UDP
+#include <netinet/in.h> // for UDP          // for File output
+#include <sys/time.h>       // Time measurement
+#include <strings.h>
+#include <string.h>
+#include <sys/wait.h>
+#include <ctime>
+#include <ratio>
+#include <chrono>
+#include <fstream>
 
+#define UDP_FILE_LOG_FLAG 1
+
+using namespace std;
+using namespace std::chrono;
 typedef std::vector<std::vector<int> > vvi;
 typedef std::vector<int> vi;
 
-using namespace std;
+int current_pontuation = 0;
 
+mutex points;
 mutex readUserInput;
 mutex print;
 mutex map;
@@ -63,7 +79,7 @@ void Map::printMap(){
         std::cout << this->Map[y] << std::endl;
     }
 
-    
+
     /*for(int i=0; i<borda.size(); i++){
         cout << borda[i][0] << " " << borda[i][1] << endl;
     }
@@ -256,10 +272,10 @@ void enemies_move(string &direction, int &leftmost, int &rightmost, bool &flag_d
             first = true;
             for(int y=1; y<mapLength-2; y++){
                 if(mapManager.Map[y][x] != 'A' && mapManager.Map[y][x] != '^'){
-                    // Salva caractere 
+                    // Salva caractere
                     current_enemy = mapManager.Map[y][x];
                     // primeiro da linha
-                    if(first){ 
+                    if(first){
                         mapManager.Map[y][x] = ' ';
                         last_enemy = current_enemy;
                         first = false;
@@ -270,7 +286,7 @@ void enemies_move(string &direction, int &leftmost, int &rightmost, bool &flag_d
                     }
                 }
             }
-        }    
+        }
         // troca de sentido
         flag_down = false;
         if(direction == "right"){
@@ -281,21 +297,21 @@ void enemies_move(string &direction, int &leftmost, int &rightmost, bool &flag_d
         move_borda("down");
     }else{
         // movimenta para a direita
-        if(direction == "right"){ 
+        if(direction == "right"){
             //flag_down = true;
             for(int y=1; y<mapWidth-2; y++){
                 first = true;
                 for(int x=1; x<mapLength-2; x++){
                     if(mapManager.Map[y][x] != 'A' && mapManager.Map[y][x] != '^'){
-                        // Salva caractere 
+                        // Salva caractere
                         current_enemy = mapManager.Map[y][x];
                         // primeiro da linha
-                        if(first){ 
+                        if(first){
                             mapManager.Map[y][x] = ' ';
                             last_enemy = current_enemy;
                             first = false;
                         //outros
-                        }else{ 
+                        }else{
                             mapManager.Map[y][x] = last_enemy;
                             last_enemy = current_enemy;
                         }
@@ -316,15 +332,15 @@ void enemies_move(string &direction, int &leftmost, int &rightmost, bool &flag_d
                 first = true;
                 for(int x=(mapWidth-3); x>0; x--){
                     if(mapManager.Map[y][x] != 'A' && mapManager.Map[y][x] != '^'){
-                        // Salva caractere 
+                        // Salva caractere
                         current_enemy = mapManager.Map[y][x];
                         // primeiro da linha
-                        if(first){ 
+                        if(first){
                             mapManager.Map[y][x] = ' ';
                             last_enemy = current_enemy;
                             first = false;
                         //outros
-                        }else{ 
+                        }else{
                             mapManager.Map[y][x] = last_enemy;
                             last_enemy = current_enemy;
                         }
@@ -408,7 +424,7 @@ void enemy_update(){
 
 }
 
-// Para saber qual os inimigos mais a esquerda ou a direita tem que contar fazer um vetor 
+// Para saber qual os inimigos mais a esquerda ou a direita tem que contar fazer um vetor
 //com a contagem de
 // quais inimigos daquela fileira morreu.
 
@@ -436,18 +452,18 @@ void playerControl(){
         count = 0;
         for(int y = 19; y > 0; y--){
             for(int x = 19; x > 0; x--){
-            
+
                 switch(mapManager.Map[y][x]){
 
                     case 'A':
                         //sync here
                         //Moves Left
                         if(command == 's' || command == 'S') move(x-1, true, x, y);
-                        
+
 
                         //Moves Right
                         if(command == 'd' || command == 'D') move(x+1, false, x, y);
-                        
+
 
                         if(command == 'l' || command == 'L'){
                             mapManager.Map[y-1][x] = '^';
@@ -463,6 +479,9 @@ void playerControl(){
 
                             if(mapManager.Map[y-1][x] == 'W' || mapManager.Map[y-1][x] == 'Y' ||
                                mapManager.Map[y-1][x] == 'U' || mapManager.Map[y-1][x] == 'V'){
+                               points.lock();
+                               current_pontuation += 1;
+                               points.unlock();
                                 // Atualizar bordas
                                 enemy_killed(x, y-1);
                                 mapManager.Map[y-1][x] = ' ';
@@ -482,7 +501,6 @@ void playerControl(){
                             update_shot = false;
                             mapManager.Map[y][x] = ' ';
                             if(mapManager.Map[y+1][x] == 'A'){
-                                // fim do jogo
                                 mapManager.Map[y+1][x] == ' ';
                                 endgame = true;
                                 int q = 0;
@@ -494,7 +512,7 @@ void playerControl(){
                         }else{
                             update_shot = true;
                         }
-                        
+
                 }
             }
         }
@@ -503,30 +521,275 @@ void playerControl(){
     }
 }
 
+class UDP_Thread_Server {
+
+private:
+
+    int sockfd,n;           // UDP
+    struct sockaddr_in servaddr,cliaddr;    // UDP
+    socklen_t len;          // UDP
+
+public:
+
+    void InternalThreadEntryFunc();
+    void init();
+};
+
+
+
+class UDP_Thread_Client {
+
+private:
+
+    int sockfd,n;           // UDP
+    struct sockaddr_in servaddr,cliaddr;    // UDP
+    socklen_t len;          // UDP
+
+public:
+
+    void InternalThreadEntryFunc();
+    void LifeCheck();
+    void init();
+};
+
+void UDP_Thread_Client::init(){
+
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        perror("socket creation failed");
+        exit(EXIT_FAILURE);
+    }
+
+    bzero(&servaddr,sizeof(servaddr));
+
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_port = htons(14654);
+    servaddr.sin_addr.s_addr = INADDR_ANY;
+
+}
+
+void UDP_Thread_Client::InternalThreadEntryFunc() {
+
+    int buffer[1024];
+
+    for(;;){
+
+        sleep(5);
+
+        buffer[0] = 0;
+        buffer[1] = current_pontuation;
+
+        sendto(sockfd, buffer, sizeof(buffer),
+            MSG_CONFIRM, (const struct sockaddr *) &servaddr,
+                sizeof(servaddr));
+
+        if(endgame) break;
+    }
+
+}
+
+void UDP_Thread_Client::LifeCheck() {
+
+    int buffer[1024];
+
+    for(;;){
+
+        if(endgame){
+
+            buffer[0] = 1;
+            buffer[1] = 0;
+
+            sendto(sockfd, buffer, sizeof(buffer),
+                MSG_CONFIRM, (const struct sockaddr *) &servaddr,
+                    sizeof(servaddr));
+
+            break;
+        }
+
+        
+    }
+
+}
+
+
+void UDP_Thread_Server::init () {
+
+    // udp initialization
+    sockfd=socket(AF_INET,SOCK_DGRAM,0);
+    bzero(&servaddr,sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr=htonl(INADDR_ANY);
+    servaddr.sin_port=htons(14654);
+    bind(sockfd,(struct sockaddr *)&servaddr,sizeof(servaddr));
+
+}
+
+char* GetCurrentTime(){
+    system_clock::time_point today = system_clock::now();
+    time_t aux_time = system_clock::to_time_t (today);
+
+    return ctime(&aux_time);
+}
+
+void WriteLog(int buffer[1024]){
+
+    int command = buffer[0];
+
+    std::string init_base_string = "Início do jogo: ";
+    std::string pontuation_base_string = "Pontuacao Corrente: ";
+    std::string destruction_base_string = "  Instante de Destruicao: ";
+    std::string life_base_string = "Vidas Restantes: ";
+    std::string end_base_string = "Hora do fim do jogo: ";
+
+    std::ofstream out("logs.txt", std::ios_base::app);
+
+    switch(command){
+
+        case 0:
+            {
+                std::string number = std::to_string(buffer[1]);
+                pontuation_base_string += number;
+                out << pontuation_base_string;
+                out << std::endl;
+            }
+        break;
+
+        case 1:
+            {
+                std::string number = std::to_string(buffer[1]);
+                std::string current_time(GetCurrentTime());
+                life_base_string += number;
+                life_base_string += " ";
+
+                destruction_base_string += current_time;
+                life_base_string += destruction_base_string;
+
+                out << life_base_string;
+            }
+        break;
+
+        case 2:
+            {
+                std::string current_time(GetCurrentTime());
+                end_base_string += current_time;
+                out << end_base_string;
+            }
+        break;
+
+        case 3:
+            {
+                std::string current_time(GetCurrentTime());
+                init_base_string += current_time;
+                out << init_base_string;
+            }
+        break;
+    }
+
+    out.close();
+}
+
+void UDP_Thread_Server::InternalThreadEntryFunc() {
+
+    int buffer[1024];
+    int n;
+    socklen_t len;
+
+    for (;;){
+        len = sizeof(cliaddr);
+        n = recvfrom(sockfd, buffer, sizeof(buffer),  MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len);
+        WriteLog(buffer);
+        if(endgame) break;
+    }
+}
+
+void StartCommunicationServer(){
+    UDP_Thread_Server abc;
+    abc.init();
+
+    int hackbuff[2];
+    hackbuff[0] = 3;
+
+    WriteLog(hackbuff);
+
+    abc.InternalThreadEntryFunc();
+}
+
+void StartCommunicationClient(){
+
+    UDP_Thread_Client abc;
+    abc.init();
+
+    abc.InternalThreadEntryFunc();
+    abc.LifeCheck();
+}
+
+class HandleChildProcess {
+
+private:
+
+    int pid;
+    int status;
+
+public:
+    void init();
+};
+
+void HandleChildProcess::init(){
+
+    pid = fork();
+    int hackbuff[1];
+    hackbuff[0] = 2;
+
+    switch (pid){
+
+        case -1: // error
+            perror("fork");
+            exit(1);
+
+        case 0: // child process
+            StartCommunicationServer();
+            exit(0);
+
+        default: // parent process, pid now contains the child pid
+
+            thread comm(StartCommunicationClient);
+            // Dispara threads para iniciar o programa.
+            thread input(readInput);
+            thread refresh(_refresh);
+            thread player(playerControl);
+            thread enemy(enemy_update);
+            //thread logger();
+
+            while(!endgame){
+                // While loop que segura o jogo ate que o mesmo
+                // seja abortado.
+            }
+
+            // Join das thread ativas.
+            player.join();
+            refresh.join();
+            enemy.join();
+
+            if(won){
+                cout << "PARABENS!! VOCE PROTEGEU A TERRA DA AMEACA ALIENIGENA!! " << endl;
+            }
+
+            usleep(2000);
+
+            comm.join();
+
+            cout << "\n\nFIM DO JOGO! PRESSIONE QUALQUER TECLA PARA SAIR!" << endl;
+            WriteLog(hackbuff);
+            input.join();
+
+            exit(0);
+        break;
+    }
+
+}
+
 int main(){
 
-    // Dispara threads para iniciar o programa.
-    thread input(readInput);
-    thread refresh(_refresh);
-    thread player(playerControl);
-    thread enemy(enemy_update);
-    //thread logger();
-
-    while(!endgame){
-        // While loop que segura o jogo ate que o mesmo
-        // seja abortado.
-    }
-
-    // Join das thread ativas.
-    player.join();
-    refresh.join();
-    enemy.join();
-    if(won){
-        cout << "PARABENS!! VOCE PROTEGEU A TERRA DA AMEACA ALIENIGENA!! " << endl;
-    }
-    usleep(2000);
-    cout << "\n\nFIM DO JOGO!" << endl;
-    input.join();
-
+    HandleChildProcess test;
+    test.init();
     return 0;
 }
