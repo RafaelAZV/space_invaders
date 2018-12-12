@@ -43,6 +43,12 @@ vvi borda;
 vi borda_existente;
 vi column_kills;
 
+
+
+/*
+Class containing the map used in the user interface
+*/
+
 class Map{
 
     public:
@@ -93,6 +99,10 @@ void Map::printMap(){
 
 Map mapManager;
 
+
+/*
+Class responsable for receiving the user input from keyboard and allow the game to continue
+*/
 class WorkTermios{
 
     public:
@@ -151,6 +161,10 @@ char WorkTermios::getche(void){
     return getch_(1);
 }
 
+
+/*
+GLOBAL VARIABLES USED IN GAME
+*/
 bool endgame = false;
 bool won = false;
 int gamespeed = 30000;
@@ -159,7 +173,7 @@ int playerspeed = 10000;
 
 
 /*
-    TODO: PUT EVERYTHING ABOVE IN CLASSES PACKAGES
+    END WORKTERMIOS CLASS
 */
 
 
@@ -176,6 +190,10 @@ void readInput(){
 }
 
 
+
+/*
+AUXILIAR FUNCTION TO MOVE THE PLAYER IN MAP
+*/
 void move(int newX, bool left, int x, int y){
 
     switch(mapManager.Map[y][newX]){
@@ -190,6 +208,9 @@ void move(int newX, bool left, int x, int y){
 
 }
 
+/*
+Function to spawn enemies in map
+*/
 void create_enemies(int n_lines, int n_enemies_by_line){
 
     map.lock();
@@ -228,6 +249,7 @@ void create_enemies(int n_lines, int n_enemies_by_line){
 
 }
 
+
 void move_borda(string sentido){
 
     mborda.lock();
@@ -257,6 +279,9 @@ void update_leftmost_rightmost(int &leftmost, int &rightmost){
     mborda.unlock();
 }
 
+/*
+Function to move the enemies in the direction pattern
+*/
 void enemies_move(string &direction, int &leftmost, int &rightmost, bool &flag_down){
 
     char current_enemy, next_enemy;
@@ -373,6 +398,9 @@ void enemies_shot(){
     map.unlock();
 }
 
+/*
+Manage enemy dynamics when one gets killed
+*/
 void enemy_killed(int x, int y){
     int xborda, yborda;
     mborda.lock();
@@ -430,7 +458,7 @@ void enemy_update(){
 
 
 // Thread de refresh da tela de jogo.
-void _refresh(){ // tem que colocar o timer de 50ms pra atualizacao obrigatoria.
+void _refresh(){ 
 
     while(!endgame){
         system("clear");
@@ -440,6 +468,10 @@ void _refresh(){ // tem que colocar o timer de 50ms pra atualizacao obrigatoria.
 
 }
 
+
+/*
+Method controlled by the thread player
+*/
 void playerControl(){
 
     bool update_once;
@@ -521,6 +553,10 @@ void playerControl(){
     }
 }
 
+
+/*
+UDP server that represents the Logger abstraction
+*/
 class UDP_Thread_Server {
 
 private:
@@ -536,7 +572,9 @@ public:
 };
 
 
-
+/*
+UDP client that send data to server
+*/
 class UDP_Thread_Client {
 
 private:
@@ -552,6 +590,9 @@ public:
     void init();
 };
 
+/*
+Initialize conexion parameters
+*/
 void UDP_Thread_Client::init(){
 
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
@@ -567,6 +608,9 @@ void UDP_Thread_Client::init(){
 
 }
 
+/*
+Function to send data to server using sendto()
+*/
 void UDP_Thread_Client::InternalThreadEntryFunc() {
 
     int buffer[1024];
@@ -610,7 +654,9 @@ void UDP_Thread_Client::LifeCheck() {
 
 }
 
-
+/*
+Initialize conexion parameters
+*/
 void UDP_Thread_Server::init () {
 
     // udp initialization
@@ -630,6 +676,10 @@ char* GetCurrentTime(){
     return ctime(&aux_time);
 }
 
+
+/*
+Writes in log file accorindg to command received
+*/
 void WriteLog(int buffer[1024]){
 
     int command = buffer[0];
@@ -687,6 +737,10 @@ void WriteLog(int buffer[1024]){
     out.close();
 }
 
+/*
+Server function that waits a message arrive using recvfrom()
+*/
+
 void UDP_Thread_Server::InternalThreadEntryFunc() {
 
     int buffer[1024];
@@ -722,6 +776,10 @@ void StartCommunicationClient(){
     abc.LifeCheck();
 }
 
+
+/*
+Main Class to create the children process Logger and manage the parent process to do the other game tasks
+*/
 class HandleChildProcess {
 
 private:
@@ -789,7 +847,7 @@ void HandleChildProcess::init(){
 
 int main(){
 
-    HandleChildProcess test;
-    test.init();
+    HandleChildProcess game;
+    game.init();
     return 0;
 }
